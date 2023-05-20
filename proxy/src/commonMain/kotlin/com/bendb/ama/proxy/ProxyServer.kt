@@ -23,6 +23,7 @@ import io.ktor.network.sockets.aSocket
 import io.ktor.network.sockets.tcpNoDelay
 import io.ktor.utils.io.core.Closeable
 import kotlinx.atomicfu.atomic
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
@@ -60,28 +61,41 @@ class ProxyServer(
         }
 
         val job = scope.launch {
-            KtorListener(port).use { listener ->
-                mutableProxyStateFlow.value = ProxyState.LISTENING
-
-                val pool = DefaultConnectionPool(listener.selectorManager)
-                while (true) {
-                    val socket = listener.accept()
-                    val conn = pool.registerLocalSocket(socket)
-                    val id = getNextId()
-                    val session = HttpOneSession(id, pool, conn)
-
-                    launch {
-                        session.use { session ->
-                            session.run()
-                                .onEach { mutableSessionEventFlow.emit(it) }
-                                .collect()
-                        }
-                    }
-                }
+            try {
+                serve(scope)
+            } catch (e: CancellationException) {
+                // We've been closed - no big deal.
+            } catch (e: Exception) {
+                println("error occurred in proxy server: $e")
+                throw e
             }
         }
 
         job.invokeOnCompletion { close() }
+    }
+
+    private suspend fun serve(scope: CoroutineScope) {
+        KtorListener(port).use { listener ->
+            mutableProxyStateFlow.value = ProxyState.LISTENING
+
+            val pool = DefaultConnectionPool(listener.selectorManager)
+            while (true) {
+                val socket = listener.accept()
+                val conn = pool.registerLocalSocket(socket)
+                val id = getNextId()
+                val session = HttpOneSession(id, pool, conn)
+
+                scope.launch {
+                    session.use { session ->
+                        session.run()
+                            .onEach { mutableSessionEventFlow.emit(it) }
+                            .collect()
+                    }
+                }
+
+                println("accepted one connection")
+            }
+        }
     }
 
     private fun getNextId(): SessionId {

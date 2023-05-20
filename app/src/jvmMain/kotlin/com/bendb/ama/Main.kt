@@ -14,19 +14,24 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+@file:OptIn(DelicateCoroutinesApi::class)
+
 package com.bendb.ama
 
 import androidx.compose.material.MaterialTheme
 import androidx.compose.desktop.ui.tooling.preview.Preview
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.material.ProvideTextStyle
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -45,9 +50,10 @@ import com.bendb.ama.proxy.ProxyServer
 import com.bendb.ama.proxy.SessionEvent
 import com.bendb.ama.proxy.Transaction
 import com.bendb.ama.proxy.TransactionData
+import io.ktor.http.HttpMethod
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.scan
@@ -117,57 +123,70 @@ sealed interface TxState {
 
 @Composable
 fun TransactionTable(transactions: List<Transaction>) {
+    val sequenceWeight = 0.05f
     val statusWeight = 0.1f
     val methodWeight = 0.1f
     val urlWeight = 0.5f
 
-    LazyColumn(Modifier.fillMaxSize().padding(16.dp)) {
-        item {
-            Row(Modifier.background(color = Color.Gray)) {
-                TableCell("Status", statusWeight)
-                TableCell("Method", methodWeight)
-                TableCell("Path", urlWeight)
+    ProvideTextStyle(MaterialTheme.typography.body2) {
+        LazyColumn(Modifier.fillMaxSize().padding(16.dp), userScrollEnabled = true) {
+            item {
+                Row(Modifier.background(color = Color.Gray)) {
+                    TableCell("#", sequenceWeight)
+                    TableCell("Status", statusWeight)
+                    TableCell("Method", methodWeight)
+                    TableCell("Path", urlWeight)
+                }
             }
-        }
 
-        items(transactions) { tx ->
-            TransactionRow(tx)
+            itemsIndexed(transactions) { ix, tx ->
+                val sequenceId = "${ix + 1}"
+                TransactionRow(sequenceId, tx) { txData ->
+                    println("Clicked on $txData")}
+            }
         }
     }
 }
 
 @Composable
 fun RowScope.TableCell(text: String, weight: Float) {
-    Text(
-        text,
-        Modifier
-            .border(1.dp, Color.Black)
-            .weight(weight)
-            .padding(8.dp)
-    )
+    Column(Modifier.weight(weight, true).border(1.dp, Color.Black)) {
+        SelectionContainer {
+            Text(text, Modifier.padding(8.dp))
+        }
+    }
 }
 
 @Composable
-fun TransactionRow(initialTx: Transaction) {
-    // I think this is necessary to trigger recomposition?
+fun TransactionRow(
+    sequenceId: String, initialTx: Transaction,
+    onClick: (TransactionData?) -> Unit = { _ -> },
+) {
     val txLoadingState by initialTx.events
         .map { TxState.Ready(it.tx) }
         .collectAsState(TxState.Loading)
 
-    if (txLoadingState is TxState.Loading) {
-        Row {
-            TableCell("", 0.1f)
-            TableCell("", 0.1f)
-            TableCell("", 0.1f)
+    var statusCode = ""
+    var method = ""
+    var requestPath = ""
+    (txLoadingState as? TxState.Ready)?.let { readyState ->
+        val tx = readyState.tx
+        if (tx.response.statusCode != 0) {
+            statusCode = tx.response.statusCode.toString()
+        } else if (tx.request.method.value == "CONNECT") {
+            statusCode = "-"
+        } else {
+            statusCode = ""
         }
-        return
+
+        method = tx.request.method.value
+        requestPath = tx.request.requestPath
     }
 
-    val tx = (txLoadingState as TxState.Ready).tx
-
-    Row {
-        TableCell(tx.response.statusCode.toString(), 0.1f)
-        TableCell(tx.request.method.value, 0.1f)
-        TableCell(tx.request.requestPath, 0.5f)
+    Row(Modifier.clickable { onClick((txLoadingState as? TxState.Ready)?.tx) }) {
+        TableCell(sequenceId, 0.05f)
+        TableCell(statusCode, 0.1f)
+        TableCell(method, 0.1f)
+        TableCell(requestPath, 0.5f)
     }
 }

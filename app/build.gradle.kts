@@ -14,6 +14,10 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+// Ignores a compiler warning about unused variables in sourceSets; allegedly fixed in Kotlin 1.9.
+// https://youtrack.jetbrains.com/issue/KT-38871/Kotlin-Gradle-DSL-MPP-UNUSEDVARIABLE-when-configuring-a-sourceset-with-delegated-property
+@file:Suppress("UNUSED_VARIABLE")
+
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 
 plugins {
@@ -58,6 +62,7 @@ kotlin {
             dependencies {
                 implementation(compose.desktop.currentOs)
 
+                implementation(libs.kotlinx.atomicfu.jvm)
                 implementation(libs.sqldelight.coroutines)
                 implementation(libs.sqldelight.sqliteDriver)
             }

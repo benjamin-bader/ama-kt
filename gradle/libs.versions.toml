@@ -1,5 +1,5 @@
 [versions]
-atomicfu = "0.17.0"
+atomicfu = "0.20.2"
 coro = "1.7.0-RC"
 kotlin = "1.8.20"
 koin = "3.4.0"
@@ -11,6 +11,7 @@ koin-compose = { module = "io.insert-koin:koin-androidx-compose", version.ref = 
 koin-core = { module = "io.insert-koin:koin-core", version.ref = "koin" }
 koin-test = { module = "io.insert-koin:koin-test", version.ref = "koin" }
 koin-test-junit4 = { module = "io.insert-koin:koin-test-junit4", version.ref = "koin" }
+kotlinx-atomicfu-common = { module = "org.jetbrains.kotlinx:atomicfu", version.ref = "atomicfu" }
 kotlinx-atomicfu-jvm = { module = "org.jetbrains.kotlinx:atomicfu-jvm", version.ref = "atomicfu" }
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coro" }
 ktor-http = { module = "io.ktor:ktor-http", version.ref = "ktor" }
@@ -20,8 +21,8 @@ sqldelight-coroutines = { module = "app.cash.sqldelight:coroutines-extensions", 
 sqldelight-sqliteDriver = { module = "app.cash.sqldelight:sqlite-driver", version.ref = "sqldelight" }
 
 [plugins]
+atomicfu = { id = "kotlinx-atomicfu", version.ref = "atomicfu" }
 kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
-kotlinx-atomicfu = "org.jetbrains.kotlin.plugin.atomicfu:1.8.21"
 jetbrains-compose = { id = "org.jetbrains.compose", version = "1.4.0" }
 sqldelight = { id = "app.cash.sqldelight", version.ref = "sqldelight" }
 

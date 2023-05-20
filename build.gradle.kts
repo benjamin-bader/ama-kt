@@ -16,5 +16,5 @@
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform) apply false
-    id("kotlinx-atomicfu").version("0.20.2")
+    alias(libs.plugins.atomicfu)
 }

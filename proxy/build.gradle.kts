@@ -14,6 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+@file:Suppress("UNUSED_VARIABLE")
+
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
 }
@@ -23,6 +25,7 @@ kotlin {
         jvmToolchain(17)
         withJava()
     }
+
     sourceSets {
         val commonMain by getting {
             dependencies {
@@ -30,7 +33,7 @@ kotlin {
                 implementation(libs.ktor.http)
                 implementation(libs.ktor.network)
 
-                implementation("org.jetbrains.kotlinx:atomicfu:0.20.2")
+                implementation(libs.kotlinx.atomicfu.common)
             }
         }
 
