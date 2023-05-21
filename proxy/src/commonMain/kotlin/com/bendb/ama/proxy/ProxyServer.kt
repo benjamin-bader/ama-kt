@@ -51,12 +51,11 @@ class ProxyServer(
     private val mutableProxyStateFlow = MutableStateFlow(ProxyState.STOPPED)
 
     val sessionEvents: SharedFlow<SessionEvent> = mutableSessionEventFlow.asSharedFlow()
-    val proxyStateEvents: StateFlow<ProxyState> = mutableProxyStateFlow.asStateFlow()
+    val proxyStateFlow: StateFlow<ProxyState> = mutableProxyStateFlow.asStateFlow()
 
-    suspend fun listen() {
+    fun listen() {
         val scope = CoroutineScope(CoroutineName("ProxyServer") + SupervisorJob() + dispatcher)
-        val existingScope = scopeRef.value
-        if (existingScope != null || !scopeRef.compareAndSet(null, scope)) {
+        if (!scopeRef.compareAndSet(null, scope)) {
             throw IllegalStateException("Already listening")
         }
 

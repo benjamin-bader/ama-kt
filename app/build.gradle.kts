@@ -71,13 +71,18 @@ kotlin {
     }
 }
 
-compose.desktop {
-    application {
-        mainClass = "com.bendb.ama.MainKt"
-        nativeDistributions {
-            targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
-            packageName = "ama-kt"
-            packageVersion = "1.0.0"
+compose {
+    kotlinCompilerPlugin.set("androidx.compose.compiler:compiler:1.4.7")
+
+    desktop {
+
+        application {
+            mainClass = "com.bendb.ama.MainKt"
+            nativeDistributions {
+                targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
+                packageName = "ama-kt"
+                packageVersion = "1.0.0"
+            }
         }
     }
 }

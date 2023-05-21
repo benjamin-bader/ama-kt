@@ -31,6 +31,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.material.Button
 import androidx.compose.material.ProvideTextStyle
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
@@ -50,7 +51,6 @@ import com.bendb.ama.proxy.ProxyServer
 import com.bendb.ama.proxy.SessionEvent
 import com.bendb.ama.proxy.Transaction
 import com.bendb.ama.proxy.TransactionData
-import io.ktor.http.HttpMethod
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
@@ -75,10 +75,6 @@ suspend fun main() = application {
         CoroutineScope(newSingleThreadContext("database")).launch {
             Db.Schema.migrate(dbDriver, 0, Db.Schema.version)
         }
-
-        launch(Dispatchers.IO) {
-            server.listen()
-        }
     }
 
     Window(
@@ -98,21 +94,39 @@ fun App() {
         .scan(listOf<Transaction>()) { txs, event -> txs + event.transaction }
         .collectAsState(listOf())
 
-    val serverStatus by server.proxyStateEvents.collectAsState()
+    val serverStatus by server.proxyStateFlow.collectAsState()
 
     MaterialTheme {
         Column(Modifier.padding(top = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            when (serverStatus) {
-                ProxyServer.ProxyState.STOPPED -> {
-                    Text(text = "Starting up...")
-                }
-                ProxyServer.ProxyState.LISTENING -> {
-                    Text(text = "Listening on port ${server.port}")
+            ServerStatusLabel(serverStatus) {
+                when (serverStatus) {
+                    ProxyServer.ProxyState.STOPPED -> server.listen()
+                    ProxyServer.ProxyState.LISTENING -> server.close()
                 }
             }
 
             TransactionTable(sessions)
         }
+    }
+}
+
+@Composable
+fun ServerStatusLabel(status: ProxyServer.ProxyState, onButtonClick: () -> Unit = {}) {
+    val message = when (status) {
+        ProxyServer.ProxyState.STOPPED -> "Starting up..."
+        ProxyServer.ProxyState.LISTENING -> "Listening on port ${server.port}"
+    }
+
+    val icon = when (status) {
+        ProxyServer.ProxyState.STOPPED -> "▶"
+        ProxyServer.ProxyState.LISTENING -> "⏸"
+    }
+
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Button(onClick = onButtonClick) {
+            Text(text = icon)
+        }
+        Text(text = message)
     }
 }
 
@@ -166,21 +180,27 @@ fun TransactionRow(
         .map { TxState.Ready(it.tx) }
         .collectAsState(TxState.Loading)
 
-    var statusCode = ""
-    var method = ""
-    var requestPath = ""
-    (txLoadingState as? TxState.Ready)?.let { readyState ->
-        val tx = readyState.tx
-        if (tx.response.statusCode != 0) {
-            statusCode = tx.response.statusCode.toString()
-        } else if (tx.request.method.value == "CONNECT") {
-            statusCode = "-"
-        } else {
+    val statusCode: String
+    val method: String
+    val requestPath: String
+
+    when (val state = txLoadingState) {
+        is TxState.Loading -> {
             statusCode = ""
+            method = ""
+            requestPath = ""
         }
 
-        method = tx.request.method.value
-        requestPath = tx.request.requestPath
+        is TxState.Ready -> {
+            val tx = state.tx
+            method = tx.request.method.value
+            requestPath = tx.request.requestPath
+            statusCode = when {
+                tx.response.statusCode != 0 -> "${tx.response.statusCode}"
+                tx.request.method.value == "CONNECT" -> "-"
+                else -> ""
+            }
+        }
     }
 
     Row(Modifier.clickable { onClick((txLoadingState as? TxState.Ready)?.tx) }) {
