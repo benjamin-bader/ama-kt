@@ -22,6 +22,7 @@ import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
+    alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.jetbrains.compose)
     alias(libs.plugins.sqldelight)
 }
@@ -42,8 +43,12 @@ kotlin {
                 implementation(compose.ui)
                 implementation(compose.material)
 
+                implementation(libs.appdirs)
                 implementation(libs.koin.compose)
                 implementation(libs.koin.core)
+                implementation(libs.kotlinx.serialization.json)
+                implementation(libs.kstore.core)
+                implementation(libs.kstore.file)
 
                 implementation(libs.ktor.http)
                 implementation(libs.ktor.network)

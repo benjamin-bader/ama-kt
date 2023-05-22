@@ -3,10 +3,13 @@ atomicfu = "0.20.2"
 coro = "1.7.0-RC"
 kotlin = "1.8.21"
 koin = "3.4.0"
+kstore = "0.6.0"
 ktor = "2.3.0"
+serialization = "1.5.0"
 sqldelight = "2.0.0-alpha05"
 
 [libraries]
+appdirs = "net.harawata:appdirs:1.2.1"
 koin-compose = { module = "io.insert-koin:koin-androidx-compose", version.ref = "koin" }
 koin-core = { module = "io.insert-koin:koin-core", version.ref = "koin" }
 koin-test = { module = "io.insert-koin:koin-test", version.ref = "koin" }
@@ -14,6 +17,10 @@ koin-test-junit4 = { module = "io.insert-koin:koin-test-junit4", version.ref = "
 kotlinx-atomicfu-common = { module = "org.jetbrains.kotlinx:atomicfu", version.ref = "atomicfu" }
 kotlinx-atomicfu-jvm = { module = "org.jetbrains.kotlinx:atomicfu-jvm", version.ref = "atomicfu" }
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coro" }
+kotlinx-serialization-core = { module = "org.jetbrains.kotlinx:kotlinx-serialization-core", version.ref = "serialization" }
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "serialization" }
+kstore-core = { module = "io.github.xxfast:kstore", version.ref = "kstore" }
+kstore-file = { module = "io.github.xxfast:kstore-file", version.ref = "kstore" }
 ktor-http = { module = "io.ktor:ktor-http", version.ref = "ktor" }
 ktor-network = { module = "io.ktor:ktor-network", version.ref = "ktor" }
 ktor-networkTls = { module = "io.ktor:ktor-network-tls", version.ref = "ktor" }
@@ -23,6 +30,7 @@ sqldelight-sqliteDriver = { module = "app.cash.sqldelight:sqlite-driver", versio
 [plugins]
 atomicfu = { id = "kotlinx-atomicfu", version.ref = "atomicfu" }
 kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 jetbrains-compose = { id = "org.jetbrains.compose", version = "1.4.0" }
 sqldelight = { id = "app.cash.sqldelight", version.ref = "sqldelight" }
 

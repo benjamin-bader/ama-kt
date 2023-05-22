@@ -18,7 +18,6 @@
 
 package com.bendb.ama
 
-import androidx.compose.material.MaterialTheme
 import androidx.compose.desktop.ui.tooling.preview.Preview
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -32,8 +31,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.Button
+import androidx.compose.material.MaterialTheme
 import androidx.compose.material.ProvideTextStyle
 import androidx.compose.material.Text
+import androidx.compose.material.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -41,6 +42,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
@@ -51,6 +53,7 @@ import com.bendb.ama.proxy.ProxyServer
 import com.bendb.ama.proxy.SessionEvent
 import com.bendb.ama.proxy.Transaction
 import com.bendb.ama.proxy.TransactionData
+import io.github.xxfast.kstore.KStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
@@ -65,24 +68,32 @@ private val koin = startKoin {
     // lol will we actually need this?  guessing "no" at this point.
 }.koin
 
-private val server = ProxyServer(Dispatchers.IO,9977)
+private val configStore: KStore<Configuration> = getConfigurationStorage()
 
-suspend fun main() = application {
-    val windowState = rememberWindowState()
+lateinit var server: ProxyServer
 
-    LaunchedEffect(key1 = this) {
-        val dbDriver = JdbcSqliteDriver("jdbc:sqlite:")
-        CoroutineScope(newSingleThreadContext("database")).launch {
-            Db.Schema.migrate(dbDriver, 0, Db.Schema.version)
+suspend fun main() {
+    val config = configStore.get() ?: Configuration()
+    server = ProxyServer(Dispatchers.IO, config.port)
+
+    application {
+        val windowState = rememberWindowState()
+
+        LaunchedEffect(key1 = this) {
+            val dbDriver = JdbcSqliteDriver("jdbc:sqlite:")
+            CoroutineScope(newSingleThreadContext("database")).launch {
+                Db.Schema.migrate(dbDriver, 0, Db.Schema.version)
+            }
         }
-    }
 
-    Window(
-        onCloseRequest = ::exitApplication,
-        state = windowState,
-        title = "Ama",
-    ) {
-        App()
+        Window(
+            onCloseRequest = ::exitApplication,
+            state = windowState,
+            title = AppInfo.displayName,
+            icon = painterResource("icons/logo.svg")
+        ) {
+            App()
+        }
     }
 }
 
@@ -98,13 +109,15 @@ fun App() {
 
     MaterialTheme {
         Column(Modifier.padding(top = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            ServerStatusLabel(serverStatus) {
-                when (serverStatus) {
-                    ProxyServer.ProxyState.STOPPED -> server.listen()
-                    ProxyServer.ProxyState.LISTENING -> server.close()
+            TopAppBar {
+                ServerStatusLabel(serverStatus) {
+                    when (serverStatus) {
+                        ProxyServer.ProxyState.STOPPED -> server.listen()
+                        ProxyServer.ProxyState.LISTENING -> server.close()
+                    }
                 }
-            }
 
+            }
             TransactionTable(sessions)
         }
     }
@@ -122,7 +135,7 @@ fun ServerStatusLabel(status: ProxyServer.ProxyState, onButtonClick: () -> Unit 
         ProxyServer.ProxyState.LISTENING -> "⏸"
     }
 
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
         Button(onClick = onButtonClick) {
             Text(text = icon)
         }
