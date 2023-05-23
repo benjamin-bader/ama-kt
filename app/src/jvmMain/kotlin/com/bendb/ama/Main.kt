@@ -53,7 +53,6 @@ import com.bendb.ama.proxy.ProxyServer
 import com.bendb.ama.proxy.SessionEvent
 import com.bendb.ama.proxy.Transaction
 import com.bendb.ama.proxy.TransactionData
-import io.github.xxfast.kstore.KStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
@@ -68,13 +67,12 @@ private val koin = startKoin {
     // lol will we actually need this?  guessing "no" at this point.
 }.koin
 
-private val configStore: KStore<Configuration> = getConfigurationStorage()
-
 lateinit var server: ProxyServer
 
 suspend fun main() {
+    val configStore = getConfigurationStorage()
     val config = configStore.get() ?: Configuration()
-    server = ProxyServer(Dispatchers.IO, config.port)
+    server = ProxyServer(Dispatchers.IO, config.http.port)
 
     application {
         val windowState = rememberWindowState()

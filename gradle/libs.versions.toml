@@ -4,6 +4,7 @@ coro = "1.7.0-RC"
 kotlin = "1.8.21"
 koin = "3.4.0"
 kstore = "0.6.0"
+ktoml = "0.5.0"
 ktor = "2.3.0"
 serialization = "1.5.0"
 sqldelight = "2.0.0-alpha05"
@@ -21,9 +22,12 @@ kotlinx-serialization-core = { module = "org.jetbrains.kotlinx:kotlinx-serializa
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "serialization" }
 kstore-core = { module = "io.github.xxfast:kstore", version.ref = "kstore" }
 kstore-file = { module = "io.github.xxfast:kstore-file", version.ref = "kstore" }
+ktoml-core = { module = "com.akuleshov7:ktoml-core", version.ref = "ktoml" }
+koml-file = { module = "com.akuleshov7:ktoml-file", version.ref = "ktoml" }
 ktor-http = { module = "io.ktor:ktor-http", version.ref = "ktor" }
 ktor-network = { module = "io.ktor:ktor-network", version.ref = "ktor" }
 ktor-networkTls = { module = "io.ktor:ktor-network-tls", version.ref = "ktor" }
+okio = "com.squareup.okio:okio:3.3.0"
 sqldelight-coroutines = { module = "app.cash.sqldelight:coroutines-extensions", version.ref = "sqldelight" }
 sqldelight-sqliteDriver = { module = "app.cash.sqldelight:sqlite-driver", version.ref = "sqldelight" }
 

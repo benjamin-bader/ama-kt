@@ -20,5 +20,11 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class Configuration(
+    val http: ListenerConfig = ListenerConfig(),
+    val https: ListenerConfig? = null,
+)
+
+@Serializable
+data class ListenerConfig(
     val port: Int = 9977,
 )

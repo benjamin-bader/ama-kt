@@ -47,11 +47,14 @@ kotlin {
                 implementation(libs.koin.compose)
                 implementation(libs.koin.core)
                 implementation(libs.kotlinx.serialization.json)
+                implementation(libs.ktoml.core)
                 implementation(libs.kstore.core)
                 implementation(libs.kstore.file)
 
                 implementation(libs.ktor.http)
                 implementation(libs.ktor.network)
+
+                implementation(libs.okio)
 
                 implementation(project(":proxy"))
             }
