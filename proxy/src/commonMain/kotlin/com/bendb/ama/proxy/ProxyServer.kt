@@ -28,40 +28,53 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 
 class ProxyServer(
     private val dispatcher: CoroutineDispatcher,
     val port: Int,
 ) : Closeable {
-    private var scopeRef = atomic<CoroutineScope?>(null)
+    private var jobRef = atomic<Job?>(null)
     private val nextId = atomic(ULong.MIN_VALUE.toLong())
 
     private val mutableSessionEventFlow = MutableSharedFlow<SessionEvent>()
     private val mutableProxyStateFlow = MutableStateFlow(ProxyState.STOPPED)
 
+    /**
+     * A flow of [SessionEvents][SessionEvent] that occur on this proxy server.
+     *
+     * This is a *hot* flow, meaning that it will emit events even if there are no
+     * subscribers.
+     */
     val sessionEvents: SharedFlow<SessionEvent> = mutableSessionEventFlow.asSharedFlow()
+
+    /**
+     * A flow of [ProxyState] changes that occur on this proxy server.
+     *
+     * Valid states are [ProxyState.LISTENING] and [ProxyState.STOPPED].
+     */
     val proxyStateFlow: StateFlow<ProxyState> = mutableProxyStateFlow.asStateFlow()
 
     fun listen() {
-        val scope = CoroutineScope(CoroutineName("ProxyServer") + SupervisorJob() + dispatcher)
-        if (!scopeRef.compareAndSet(null, scope)) {
+        val supervisorJob = SupervisorJob()
+        if (!jobRef.compareAndSet(null, supervisorJob)) {
             throw IllegalStateException("Already listening")
         }
 
-        val job = scope.launch {
+        supervisorJob.invokeOnCompletion { jobRef.compareAndSet(supervisorJob, null) }
+
+        val scope = CoroutineScope(CoroutineName("ProxyServer") + supervisorJob + dispatcher)
+        scope.launch {
             try {
-                serve(scope)
+                serve(this@launch)
             } catch (e: CancellationException) {
                 // We've been closed - no big deal.
             } catch (e: Exception) {
@@ -69,8 +82,6 @@ class ProxyServer(
                 throw e
             }
         }
-
-        job.invokeOnCompletion { close() }
     }
 
     private suspend fun serve(scope: CoroutineScope) {
@@ -87,8 +98,7 @@ class ProxyServer(
                 scope.launch {
                     session.use { session ->
                         session.run()
-                            .onEach { mutableSessionEventFlow.emit(it) }
-                            .collect()
+                            .collect { mutableSessionEventFlow.emit(it) }
                     }
                 }
 
@@ -111,7 +121,7 @@ class ProxyServer(
     }
 
     override fun close() {
-        scopeRef.getAndSet(null)?.cancel()
+        jobRef.getAndSet(null)?.cancel()
         mutableProxyStateFlow.value = ProxyState.STOPPED
     }
 

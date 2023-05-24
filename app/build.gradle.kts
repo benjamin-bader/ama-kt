@@ -91,12 +91,22 @@ compose {
                 packageName = "ama-kt"
                 packageVersion = "1.0.0"
 
-                val iconsRoot = project.file("src/commonMain/resources/icons")
+                modules(
+                    "java.sql", // for sqldelight, which needs java.sql.DriverManager
+                )
+
+                val iconsRoot = rootProject.layout.projectDirectory.dir("assets")
                 macOS {
-                    iconFile.set(iconsRoot.resolve("logo.icns"))
+                    iconFile.set(iconsRoot.file("logo.icns"))
                 }
 
-                modules("java.sql")
+                windows {
+                    iconFile.set(iconsRoot.file("logo.ico"))
+                }
+
+                linux {
+                    iconFile.set(iconsRoot.file("logo.png"))
+                }
             }
         }
     }
