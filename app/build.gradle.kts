@@ -90,6 +90,13 @@ compose {
                 targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
                 packageName = "ama-kt"
                 packageVersion = "1.0.0"
+
+                val iconsRoot = project.file("src/commonMain/resources/icons")
+                macOS {
+                    iconFile.set(iconsRoot.resolve("logo.icns"))
+                }
+
+                modules("java.sql")
             }
         }
     }
