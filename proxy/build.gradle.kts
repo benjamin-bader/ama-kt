@@ -20,6 +20,9 @@ plugins {
     alias(libs.plugins.kotlin.multiplatform)
 }
 
+group = properties["GROUP"]!!
+version = properties["VERSION"]!!
+
 kotlin {
     jvm {
         jvmToolchain(17)

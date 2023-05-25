@@ -16,7 +16,7 @@
 
 @file:OptIn(DelicateCoroutinesApi::class)
 
-package com.bendb.ama
+package com.bendb.ama.app
 
 import androidx.compose.desktop.ui.tooling.preview.Preview
 import androidx.compose.foundation.background

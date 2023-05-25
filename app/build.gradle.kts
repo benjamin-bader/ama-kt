@@ -27,8 +27,8 @@ plugins {
     alias(libs.plugins.sqldelight)
 }
 
-group = "com.example"
-version = "1.0-SNAPSHOT"
+group = properties["GROUP"]!!
+version = properties["VERSION"]!!
 
 kotlin {
     jvm {
@@ -83,7 +83,6 @@ compose {
     kotlinCompilerPlugin.set("androidx.compose.compiler:compiler:1.4.7")
 
     desktop {
-
         application {
             mainClass = "com.bendb.ama.MainKt"
             nativeDistributions {
@@ -91,8 +90,10 @@ compose {
                 packageName = "ama-kt"
                 packageVersion = "1.0.0"
 
+                licenseFile.set(rootProject.file("LICENSE.md"))
+
                 modules(
-                    "java.sql", // for sqldelight, which needs java.sql.DriverManager
+                    "java.sql", // for sqldelight, which needs JDBC things
                 )
 
                 val iconsRoot = rootProject.layout.projectDirectory.dir("assets")
