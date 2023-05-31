@@ -48,6 +48,11 @@ import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
+import com.bendb.ama.app.main.MainViewInput
+import com.bendb.ama.app.main.MainViewModel
+import com.bendb.ama.app.main.MainViewState
+import com.bendb.ama.app.main.TransactionViewModel
+import com.bendb.ama.app.main.TxModelState
 import com.bendb.ama.db.Db
 import com.bendb.ama.proxy.ProxyServer
 import com.bendb.ama.proxy.SessionEvent
@@ -76,6 +81,7 @@ suspend fun main() {
 
     application {
         val windowState = rememberWindowState()
+        val vm = MainViewModel(server)
 
         LaunchedEffect(key1 = this) {
             val dbDriver = JdbcSqliteDriver("jdbc:sqlite:")
@@ -90,47 +96,48 @@ suspend fun main() {
             title = AppInfo.displayName,
             icon = painterResource("icons/logo.svg")
         ) {
-            App()
+            App(vm)
         }
     }
 }
 
 @Composable
 @Preview
-fun App() {
+fun App(vm: MainViewModel) {
     val sessions by server.sessionEvents
         .filterIsInstance<SessionEvent.TransactionStarted>()
         .scan(listOf<Transaction>()) { txs, event -> txs + event.transaction }
         .collectAsState(listOf())
 
-    val serverStatus by server.proxyStateFlow.collectAsState()
+    val uiState by vm.state.collectAsState()
 
     MaterialTheme {
         Column(Modifier.padding(top = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             TopAppBar {
-                ServerStatusLabel(serverStatus) {
-                    when (serverStatus) {
-                        ProxyServer.ProxyState.STOPPED -> server.listen()
-                        ProxyServer.ProxyState.LISTENING -> server.close()
+                ServerStatusLabel(uiState) {
+                    when (uiState) {
+                        is MainViewState.Stopped -> vm.accept(MainViewInput.StartProxy)
+                        else -> vm.accept(MainViewInput.StopProxy)
                     }
                 }
 
             }
-            TransactionTable(sessions)
+            TransactionTable(uiState)
         }
     }
 }
 
 @Composable
-fun ServerStatusLabel(status: ProxyServer.ProxyState, onButtonClick: () -> Unit = {}) {
-    val message = when (status) {
-        ProxyServer.ProxyState.STOPPED -> "Starting up..."
-        ProxyServer.ProxyState.LISTENING -> "Listening on port ${server.port}"
+fun ServerStatusLabel(state: MainViewState, onButtonClick: () -> Unit = {}) {
+    val message = when (state) {
+        is MainViewState.Ready -> "Listening on port ${state.port}"
+        is MainViewState.Stopped -> "Proxy stopped; press play to start."
+        is MainViewState.Starting -> "Starting up..."
     }
 
-    val icon = when (status) {
-        ProxyServer.ProxyState.STOPPED -> "▶"
-        ProxyServer.ProxyState.LISTENING -> "⏸"
+    val icon = when (state) {
+        MainViewState.Stopped -> "▶"
+        else -> "⏸"
     }
 
     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -147,7 +154,7 @@ sealed interface TxState {
 }
 
 @Composable
-fun TransactionTable(transactions: List<Transaction>) {
+fun TransactionTable(state: MainViewState) {
     val sequenceWeight = 0.05f
     val statusWeight = 0.1f
     val methodWeight = 0.1f
@@ -164,10 +171,11 @@ fun TransactionTable(transactions: List<Transaction>) {
                 }
             }
 
-            itemsIndexed(transactions) { ix, tx ->
-                val sequenceId = "${ix + 1}"
-                TransactionRow(sequenceId, tx) { txData ->
-                    println("Clicked on $txData")}
+            if (state is MainViewState.Ready) {
+                itemsIndexed(state.transactions) { ix, tx ->
+                    val sequenceId = "${ix + 1}"
+                    TransactionRow(sequenceId, tx)
+                }
             }
         }
     }
@@ -184,25 +192,23 @@ fun RowScope.TableCell(text: String, weight: Float) {
 
 @Composable
 fun TransactionRow(
-    sequenceId: String, initialTx: Transaction,
+    sequenceId: String, vm: TransactionViewModel,
     onClick: (TransactionData?) -> Unit = { _ -> },
 ) {
-    val txLoadingState by initialTx.events
-        .map { TxState.Ready(it.tx) }
-        .collectAsState(TxState.Loading)
+    val state by vm.state.collectAsState()
 
     val statusCode: String
     val method: String
     val requestPath: String
 
-    when (val state = txLoadingState) {
-        is TxState.Loading -> {
+    when (val state = state) {
+        is TxModelState.Idle -> {
             statusCode = ""
             method = ""
             requestPath = ""
         }
 
-        is TxState.Ready -> {
+        is TxModelState.Data -> {
             val tx = state.tx
             method = tx.request.method.value
             requestPath = tx.request.requestPath
@@ -212,9 +218,15 @@ fun TransactionRow(
                 else -> ""
             }
         }
+
+        is TxModelState.Failed -> {
+            statusCode = "ERR"
+            method = ""
+            requestPath = state.error.message ?: "Proxy got itself in trouble"
+        }
     }
 
-    Row(Modifier.clickable { onClick((txLoadingState as? TxState.Ready)?.tx) }) {
+    Row(Modifier.clickable { onClick((state as? TxModelState.Data)?.tx) }) {
         TableCell(sequenceId, 0.05f)
         TableCell(statusCode, 0.1f)
         TableCell(method, 0.1f)

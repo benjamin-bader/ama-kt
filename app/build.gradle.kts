@@ -25,10 +25,16 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.jetbrains.compose)
     alias(libs.plugins.sqldelight)
+    alias(libs.plugins.ksp)
 }
 
 group = properties["GROUP"]!!
 version = properties["VERSION"]!!
+
+dependencies {
+    // I'm not sure why it's necessary to have a separate dependencies block, but it is.
+    ksp(libs.kotlin.inject.compiler)
+}
 
 kotlin {
     jvm {
@@ -46,6 +52,7 @@ kotlin {
                 implementation(libs.appdirs)
                 implementation(libs.koin.compose)
                 implementation(libs.koin.core)
+                implementation(libs.kotlin.inject.runtime)
                 implementation(libs.kotlinx.serialization.json)
                 implementation(libs.ktoml.core)
                 implementation(libs.kstore.core)
@@ -55,6 +62,7 @@ kotlin {
                 implementation(libs.ktor.network)
 
                 implementation(libs.okio)
+
 
                 implementation(project(":proxy"))
             }

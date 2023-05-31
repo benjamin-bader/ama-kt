@@ -65,16 +65,15 @@ class HttpOneSession(
 
         emit(SessionEvent.Started(session))
 
-        val tx = HttpTransaction(session, connectionPool, localConn)
         try {
-            emit(SessionEvent.TransactionStarted(session, tx))
-            tx.run()
+            HttpTransaction(session, connectionPool, localConn).use { tx ->
+                emit(SessionEvent.TransactionStarted(session, tx))
+                tx.run()
+            }
 
             emit(SessionEvent.Stopped(session))
         } catch (t: Throwable) {
             emit(SessionEvent.Error(session, t))
-        } finally {
-            tx.close()
         }
     }
 
@@ -325,7 +324,7 @@ class HttpTransaction(
         mutableTxEventsFlow.value = event
     }
 
-    suspend fun close() {
+    override suspend fun close() {
         remoteConn?.let { pool.returnConnection(it) }
         remoteConn = null
     }

@@ -22,7 +22,7 @@ import com.bendb.ama.proxy.http.MutableHttpRequest
 import com.bendb.ama.proxy.http.MutableHttpResponse
 import kotlinx.coroutines.flow.StateFlow
 
-interface Transaction {
+interface Transaction : SuspendCloseable {
     /**
      * A *hot* flow of transaction events.
      */
