@@ -58,8 +58,6 @@ class MainViewModel(
             is MainViewInput.TransactionStarted -> {
                 MainViewResult.NewTransaction(input.tx)
             }
-
-            else -> MainViewResult.NoChange
         }
     }
 

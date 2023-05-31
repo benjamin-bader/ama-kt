@@ -50,8 +50,6 @@ kotlin {
                 implementation(compose.material)
 
                 implementation(libs.appdirs)
-                implementation(libs.koin.compose)
-                implementation(libs.koin.core)
                 implementation(libs.kotlin.inject.runtime)
                 implementation(libs.kotlinx.serialization.json)
                 implementation(libs.ktoml.core)
@@ -62,7 +60,6 @@ kotlin {
                 implementation(libs.ktor.network)
 
                 implementation(libs.okio)
-
 
                 implementation(project(":proxy"))
             }
@@ -92,7 +89,7 @@ compose {
 
     desktop {
         application {
-            mainClass = "com.bendb.ama.MainKt"
+            mainClass = "com.bendb.ama.app.MainKt"
             nativeDistributions {
                 targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
                 packageName = "ama-kt"

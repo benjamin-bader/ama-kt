@@ -55,29 +55,18 @@ import com.bendb.ama.app.main.TransactionViewModel
 import com.bendb.ama.app.main.TxModelState
 import com.bendb.ama.db.Db
 import com.bendb.ama.proxy.ProxyServer
-import com.bendb.ama.proxy.SessionEvent
-import com.bendb.ama.proxy.Transaction
 import com.bendb.ama.proxy.TransactionData
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.filterIsInstance
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.scan
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.newSingleThreadContext
-import org.koin.core.context.startKoin
-
-private val koin = startKoin {
-    // lol will we actually need this?  guessing "no" at this point.
-}.koin
-
-lateinit var server: ProxyServer
 
 suspend fun main() {
     val configStore = getConfigurationStorage()
     val config = configStore.get() ?: Configuration()
-    server = ProxyServer(Dispatchers.IO, config.http.port)
+    val server = ProxyServer(Dispatchers.IO, config.http.port)
+    val vm = MainViewModel(server)
 
     application {
         val windowState = rememberWindowState()
@@ -104,11 +93,6 @@ suspend fun main() {
 @Composable
 @Preview
 fun App(vm: MainViewModel) {
-    val sessions by server.sessionEvents
-        .filterIsInstance<SessionEvent.TransactionStarted>()
-        .scan(listOf<Transaction>()) { txs, event -> txs + event.transaction }
-        .collectAsState(listOf())
-
     val uiState by vm.state.collectAsState()
 
     MaterialTheme {
