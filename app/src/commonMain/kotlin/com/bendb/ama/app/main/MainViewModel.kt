@@ -31,6 +31,26 @@ class MainViewModel(
         }
     }
 
+    // PUBLIC API
+
+    fun startProxy() {
+        accept(MainViewInput.StartProxy)
+    }
+
+    fun stopProxy() {
+        accept(MainViewInput.StopProxy)
+    }
+
+    fun selectTransaction(index: Int) {
+        accept(MainViewInput.SelectTransaction(index))
+    }
+
+    fun deselectTransaction() {
+        accept(MainViewInput.SelectTransaction(null))
+    }
+
+    // INTERNALS
+
     override suspend fun inputToResult(input: MainViewInput): MainViewResult {
         return when (input) {
             is MainViewInput.StartProxy -> {
@@ -58,6 +78,14 @@ class MainViewModel(
             is MainViewInput.TransactionStarted -> {
                 MainViewResult.NewTransaction(input.tx)
             }
+
+            is MainViewInput.SelectTransaction -> {
+                if (state.value is MainViewState.Ready) {
+                    MainViewResult.TransactionSelected(input.index)
+                } else {
+                    MainViewResult.NoChange
+                }
+            }
         }
     }
 
@@ -79,6 +107,14 @@ class MainViewModel(
                     transactions = currentState.transactions + newTxViewModel(result.tx),
                 )
             }
+
+            is MainViewResult.TransactionSelected -> {
+                require (currentState is MainViewState.Ready) {
+                    "Cannot select a transaction in a non-ready state (current state: $currentState)"
+                }
+
+                currentState.copy(selectedIndex = result.index)
+            }
         }
     }
 
@@ -95,7 +131,8 @@ sealed interface MainViewState {
     object Starting : MainViewState
     data class Ready(
         val port: Int,
-        val transactions: List<TransactionViewModel>
+        val transactions: List<TransactionViewModel>,
+        val selectedIndex: Int? = null,
     ) : MainViewState
 }
 
@@ -105,6 +142,7 @@ sealed interface MainViewInput {
     object StopProxy : MainViewInput
     object ProxyStopped : MainViewInput
     class TransactionStarted(val tx: Transaction) : MainViewInput
+    class SelectTransaction(val index: Int?) : MainViewInput
 }
 
 sealed interface MainViewResult {
@@ -113,4 +151,5 @@ sealed interface MainViewResult {
     object ProxyStarting : MainViewResult
     object ProxyStarted : MainViewResult
     class NewTransaction(val tx: Transaction) : MainViewResult
+    class TransactionSelected(val index: Int?) : MainViewResult
 }

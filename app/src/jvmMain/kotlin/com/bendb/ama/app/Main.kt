@@ -48,7 +48,6 @@ import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
-import com.bendb.ama.app.main.MainViewInput
 import com.bendb.ama.app.main.MainViewModel
 import com.bendb.ama.app.main.MainViewState
 import com.bendb.ama.app.main.TransactionViewModel
@@ -70,7 +69,6 @@ suspend fun main() {
 
     application {
         val windowState = rememberWindowState()
-        val vm = MainViewModel(server)
 
         LaunchedEffect(key1 = this) {
             val dbDriver = JdbcSqliteDriver("jdbc:sqlite:")
@@ -100,13 +98,19 @@ fun App(vm: MainViewModel) {
             TopAppBar {
                 ServerStatusLabel(uiState) {
                     when (uiState) {
-                        is MainViewState.Stopped -> vm.accept(MainViewInput.StartProxy)
-                        else -> vm.accept(MainViewInput.StopProxy)
+                        is MainViewState.Stopped -> vm.startProxy()
+                        else -> vm.stopProxy()
                     }
                 }
 
             }
-            TransactionTable(uiState)
+            TransactionTable(uiState) { tx, index ->
+                if (index != null) {
+                    vm.selectTransaction(index)
+                } else {
+                    vm.deselectTransaction()
+                }
+            }
         }
     }
 }
@@ -138,7 +142,10 @@ sealed interface TxState {
 }
 
 @Composable
-fun TransactionTable(state: MainViewState) {
+fun TransactionTable(
+    state: MainViewState,
+    onSelectionChanged: (TransactionViewModel?, Int?) -> Unit,
+) {
     val sequenceWeight = 0.05f
     val statusWeight = 0.1f
     val methodWeight = 0.1f
@@ -158,7 +165,8 @@ fun TransactionTable(state: MainViewState) {
             if (state is MainViewState.Ready) {
                 itemsIndexed(state.transactions) { ix, tx ->
                     val sequenceId = "${ix + 1}"
-                    TransactionRow(sequenceId, tx)
+                    val isSelected = state.selectedIndex == ix
+                    TransactionRow(sequenceId, tx, isSelected) { onSelectionChanged(tx, ix) }
                 }
             }
         }
@@ -176,7 +184,9 @@ fun RowScope.TableCell(text: String, weight: Float) {
 
 @Composable
 fun TransactionRow(
-    sequenceId: String, vm: TransactionViewModel,
+    sequenceId: String,
+    vm: TransactionViewModel,
+    isSelected: Boolean,
     onClick: (TransactionData?) -> Unit = { _ -> },
 ) {
     val state by vm.state.collectAsState()
@@ -210,7 +220,13 @@ fun TransactionRow(
         }
     }
 
-    Row(Modifier.clickable { onClick((state as? TxModelState.Data)?.tx) }) {
+    val backgroundColor = when {
+        isSelected -> Color.LightGray
+        state is TxModelState.Failed -> Color.Red
+        else -> Color.Transparent
+    }
+
+    Row(Modifier.background(backgroundColor).clickable { onClick((state as? TxModelState.Data)?.tx) }) {
         TableCell(sequenceId, 0.05f)
         TableCell(statusCode, 0.1f)
         TableCell(method, 0.1f)
