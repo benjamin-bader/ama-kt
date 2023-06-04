@@ -139,7 +139,11 @@ fun App(vm: MainViewModel) {
                         }
                     }
 
-                    TransactionDetails(tx)
+                    Column(Modifier.fillMaxSize().padding(16.dp)) {
+                        if (tx != null) {
+                            TransactionDetails(tx)
+                        }
+                    }
                 }
 
                 splitter {
@@ -186,11 +190,6 @@ fun ServerStatusLabel(state: MainViewState, onButtonClick: () -> Unit = {}) {
         }
         Text(text = message)
     }
-}
-
-sealed interface TxState {
-    object Loading : TxState
-    data class Ready(val tx: TransactionData) : TxState
 }
 
 @Composable
@@ -287,8 +286,24 @@ fun TransactionRow(
 }
 
 @Composable
-fun TransactionDetails(tx: TransactionViewModel?) {
-    Column(Modifier.fillMaxSize().padding(16.dp)) {
-        Text(text = "TODO: transaction details (tx=$tx)")
+fun TransactionDetails(viewModel: TransactionViewModel) {
+    val state by viewModel.state.collectAsState()
+
+    when (val state = state) {
+        is TxModelState.Idle -> {
+            return
+        }
+
+        is TxModelState.Data -> {
+            val tx = state.tx
+            Text(text = "Request")
+            Text(text = tx.request.toString())
+            Text(text = "Response")
+            Text(text = tx.response.toString())
+        }
+
+        is TxModelState.Failed -> {
+            Text(text = "Error: ${state.error.message}")
+        }
     }
 }
