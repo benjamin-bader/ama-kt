@@ -70,5 +70,3 @@ abstract class ViewModel<S, I, R, E>(
         viewModelScope.cancel(cause = null)
     }
 }
-
-typealias ViewModelNoEffect<S, I, R> = ViewModel<S, I, R, Nothing>

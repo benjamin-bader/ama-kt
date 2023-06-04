@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-@file:OptIn(DelicateCoroutinesApi::class)
+@file:OptIn(DelicateCoroutinesApi::class, ExperimentalSplitPaneApi::class)
 
 package com.bendb.ama.app
 
@@ -22,11 +22,14 @@ import androidx.compose.desktop.ui.tooling.preview.Preview
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.text.selection.SelectionContainer
@@ -42,6 +45,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
@@ -60,6 +66,10 @@ import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.newSingleThreadContext
+import org.jetbrains.compose.splitpane.ExperimentalSplitPaneApi
+import org.jetbrains.compose.splitpane.HorizontalSplitPane
+import org.jetbrains.compose.splitpane.rememberSplitPaneState
+import java.awt.Cursor
 
 suspend fun main() {
     val configStore = getConfigurationStorage()
@@ -88,10 +98,14 @@ suspend fun main() {
     }
 }
 
+private fun Modifier.cursorForHorizontalResize(): Modifier =
+    pointerHoverIcon(PointerIcon(Cursor(Cursor.E_RESIZE_CURSOR)))
+
 @Composable
 @Preview
 fun App(vm: MainViewModel) {
     val uiState by vm.state.collectAsState()
+    val splitState = rememberSplitPaneState(0.5f)
 
     MaterialTheme {
         Column(Modifier.padding(top = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -104,11 +118,49 @@ fun App(vm: MainViewModel) {
                 }
 
             }
-            TransactionTable(uiState) { tx, index ->
-                if (index != null) {
-                    vm.selectTransaction(index)
-                } else {
-                    vm.deselectTransaction()
+
+            HorizontalSplitPane(
+                splitPaneState = splitState,
+            ) {
+                first(500.dp) {
+                    TransactionTable(uiState) { tx, index ->
+                        if (index != null) {
+                            vm.selectTransaction(index)
+                        } else {
+                            vm.deselectTransaction()
+                        }
+                    }
+                }
+
+                second {
+                    val tx = (uiState as? MainViewState.Ready)?.let { state ->
+                        state.selectedIndex?.let { ix ->
+                            state.transactions[ix]
+                        }
+                    }
+
+                    TransactionDetails(tx)
+                }
+
+                splitter {
+                    visiblePart {
+                        Box(Modifier
+                            .width(1.dp)
+                            .fillMaxHeight()
+                            .background(MaterialTheme.colors.secondary)
+                        )
+                    }
+
+                    handle {
+                        Box(
+                            Modifier
+                                .markAsHandle()
+                                .cursorForHorizontalResize()
+                                .background(SolidColor(MaterialTheme.colors.secondaryVariant), alpha = 0.5f)
+                                .width(9.dp)
+                                .fillMaxHeight(0.2f)
+                        )
+                    }
                 }
             }
         }
@@ -231,5 +283,12 @@ fun TransactionRow(
         TableCell(statusCode, 0.1f)
         TableCell(method, 0.1f)
         TableCell(requestPath, 0.5f)
+    }
+}
+
+@Composable
+fun TransactionDetails(tx: TransactionViewModel?) {
+    Column(Modifier.fillMaxSize().padding(16.dp)) {
+        Text(text = "TODO: transaction details (tx=$tx)")
     }
 }

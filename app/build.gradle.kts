@@ -16,8 +16,10 @@
 
 // Ignores a compiler warning about unused variables in sourceSets; allegedly fixed in Kotlin 1.9.
 // https://youtrack.jetbrains.com/issue/KT-38871/Kotlin-Gradle-DSL-MPP-UNUSEDVARIABLE-when-configuring-a-sourceset-with-delegated-property
+@file:OptIn(ExperimentalComposeLibrary::class)
 @file:Suppress("UNUSED_VARIABLE")
 
+import org.jetbrains.compose.ExperimentalComposeLibrary
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 
 plugins {
@@ -48,6 +50,7 @@ kotlin {
                 implementation(compose.runtime)
                 implementation(compose.ui)
                 implementation(compose.material)
+                implementation(compose.desktop.components.splitPane)
 
                 implementation(libs.appdirs)
                 implementation(libs.kotlin.inject.runtime)
@@ -103,15 +106,15 @@ compose {
 
                 val iconsRoot = rootProject.layout.projectDirectory.dir("assets")
                 macOS {
-                    iconFile.set(iconsRoot.file("logo.icns"))
+                    iconFile.set(iconsRoot.file("macos.icns"))
                 }
 
                 windows {
-                    iconFile.set(iconsRoot.file("logo.ico"))
+                    iconFile.set(iconsRoot.file("windows.ico"))
                 }
 
                 linux {
-                    iconFile.set(iconsRoot.file("logo.png"))
+                    iconFile.set(iconsRoot.file("linux.png"))
                 }
             }
         }

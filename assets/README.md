@@ -17,7 +17,7 @@ From there, Apple supplies a program called `iconutil` as part of their Xcode de
 it thusly:
 
 ```zsh
-iconutil -c icns logo.iconset
+iconutil -c icns macos.iconset
 ```
 
 ### Windows
@@ -25,7 +25,7 @@ iconutil -c icns logo.iconset
 In contrast, Windows ICO files are simplicity itself.  We used Imagemagick's `convert` tool:
 
 ```zsh
-convert logo.iconset/icon_128x128.png windows.ico
+convert macos.iconset/icon_128x128.png windows.ico
 ```
 
 Note that the source here is the 128x128 PNG from the macOS iconset.  This is because, for
@@ -36,5 +36,5 @@ reasons I haven't investigated, using the SVG does not produce a transparent bac
 As with Windows, we'll use the 128x128 macOS PNG as our source.  In fact, we'll just use it as-is.
 
 ```zsh
-cp logo.iconset/icon_128x128.png linux.png
+cp macos.iconset/icon_128x128.png linux.png
 ```
