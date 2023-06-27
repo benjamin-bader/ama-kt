@@ -70,3 +70,8 @@ enum class TransactionState {
     COMPLETED,
     ERROR,
 }
+
+val TransactionState.isTerminal: Boolean
+    get() {
+        return this == TransactionState.COMPLETED || this == TransactionState.ERROR
+    }

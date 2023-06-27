@@ -43,22 +43,28 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyShortcut
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.AwtWindow
+import androidx.compose.ui.window.FrameWindowScope
+import androidx.compose.ui.window.MenuBar
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
+import com.bendb.ama.app.db.Db
 import com.bendb.ama.app.main.MainViewModel
 import com.bendb.ama.app.main.MainViewState
 import com.bendb.ama.app.main.TransactionViewModel
 import com.bendb.ama.app.main.TxModelState
-import com.bendb.ama.db.Db
 import com.bendb.ama.proxy.ProxyServer
 import com.bendb.ama.proxy.TransactionData
 import kotlinx.coroutines.CoroutineScope
@@ -70,6 +76,9 @@ import org.jetbrains.compose.splitpane.ExperimentalSplitPaneApi
 import org.jetbrains.compose.splitpane.HorizontalSplitPane
 import org.jetbrains.compose.splitpane.rememberSplitPaneState
 import java.awt.Cursor
+import java.awt.FileDialog
+import java.awt.Frame
+import javax.swing.JFileChooser
 
 suspend fun main() {
     val configStore = getConfigurationStorage()
@@ -101,19 +110,33 @@ suspend fun main() {
 private fun Modifier.cursorForHorizontalResize(): Modifier =
     pointerHoverIcon(PointerIcon(Cursor(Cursor.E_RESIZE_CURSOR)))
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 @Preview
-fun App(vm: MainViewModel) {
+fun FrameWindowScope.App(vm: MainViewModel) {
     val uiState by vm.state.collectAsState()
     val splitState = rememberSplitPaneState(0.5f)
+
+    val shouldEnableState = uiState.hasOneCompletedTx
+
+    MenuBar {
+        Menu("File", mnemonic = 'F') {
+            Item("Open", shortcut = KeyShortcut(Key.O, ctrl = true)) {
+                // TODO: Open an open-file UI, pick a DB, tell VM to load the transactions therein
+            }
+            Item("Save", shortcut = KeyShortcut(Key.S, ctrl = true), enabled = shouldEnableState) {
+                // TODO: Open a save-file UI and tell VM where to save the session
+            }
+        }
+    }
 
     MaterialTheme {
         Column(Modifier.padding(top = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             TopAppBar {
                 ServerStatusLabel(uiState) {
-                    when (uiState) {
-                        is MainViewState.Stopped -> vm.startProxy()
-                        else -> vm.stopProxy()
+                    when (uiState.listening) {
+                        true -> vm.stopProxy()
+                        else -> vm.startProxy()
                     }
                 }
 
@@ -133,11 +156,8 @@ fun App(vm: MainViewModel) {
                 }
 
                 second {
-                    val tx = (uiState as? MainViewState.Ready)?.let { state ->
-                        state.selectedIndex?.let { ix ->
-                            state.transactions[ix]
-                        }
-                    }
+                    val selectedIx = uiState.selectedIndex
+                    val tx = if (selectedIx != null) uiState.transactions[selectedIx] else null
 
                     Column(Modifier.fillMaxSize().padding(16.dp)) {
                         if (tx != null) {
@@ -173,15 +193,16 @@ fun App(vm: MainViewModel) {
 
 @Composable
 fun ServerStatusLabel(state: MainViewState, onButtonClick: () -> Unit = {}) {
-    val message = when (state) {
-        is MainViewState.Ready -> "Listening on port ${state.port}"
-        is MainViewState.Stopped -> "Proxy stopped; press play to start."
-        is MainViewState.Starting -> "Starting up..."
+    val message = if (state.listening) {
+        "Listening on port ${state.port}"
+    } else {
+        "Proxy stopped; press play to start."
     }
 
-    val icon = when (state) {
-        MainViewState.Stopped -> "▶"
-        else -> "⏸"
+    val icon = if (state.listening) {
+        "⏸"
+    } else {
+        "▶"
     }
 
     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -213,12 +234,10 @@ fun TransactionTable(
                 }
             }
 
-            if (state is MainViewState.Ready) {
-                itemsIndexed(state.transactions) { ix, tx ->
-                    val sequenceId = "${ix + 1}"
-                    val isSelected = state.selectedIndex == ix
-                    TransactionRow(sequenceId, tx, isSelected) { onSelectionChanged(tx, ix) }
-                }
+            itemsIndexed(state.transactions) { ix, tx ->
+                val sequenceId = "${ix + 1}"
+                val isSelected = state.selectedIndex == ix
+                TransactionRow(sequenceId, tx, isSelected) { onSelectionChanged(tx, ix) }
             }
         }
     }
@@ -307,3 +326,22 @@ fun TransactionDetails(viewModel: TransactionViewModel) {
         }
     }
 }
+
+@Composable
+fun OpenFileDialog(
+    prompt: String = "Choose a file",
+    parent: Frame? = null,
+    onCloseRequest: (result: String?) -> Unit
+) = AwtWindow(
+    create = {
+             object : FileDialog(parent, prompt, LOAD) {
+                 override fun setVisible(value: Boolean) {
+                     super.setVisible(value)
+                     if (value) {
+                         onCloseRequest(file)
+                     }
+                 }
+             }
+    },
+    dispose = FileDialog::dispose
+)

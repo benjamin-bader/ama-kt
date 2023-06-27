@@ -8,8 +8,8 @@ App icons are located here.  Our logo icon is derived from logo.svg in various w
 
 ### macOS
 
-This is by far the most complicated procedure.  From logo.svg, we've manually crafted an Iconset.
-We used Affinity Designer, but any featureful graphics editor should work.  Iconsets folders containing
+This is, by far, the most icon complicated procedure.  From logo.svg, we've manually crafted an Iconset.
+We used Affinity Designer, but any featureful graphics editor should work.  Iconset folders contain
 an Apple-specified set of PNGs, each with a different size.  I don't know an automated way to generate
 these comfortably from an SVG, so we did it by hand.
 

@@ -20,13 +20,16 @@ import com.bendb.ama.app.ViewModel
 import com.bendb.ama.proxy.ProxyServer
 import com.bendb.ama.proxy.SessionEvent
 import com.bendb.ama.proxy.Transaction
+import com.bendb.ama.proxy.isTerminal
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.filterIsInstance
+import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.launch
 
 class MainViewModel(
     private val proxy: ProxyServer
-) : ViewModel<MainViewState, MainViewInput, MainViewResult, Nothing>(MainViewState.Stopped) {
+) : ViewModel<MainViewState, MainViewInput, MainViewResult, Nothing>(MainViewState(port = proxy.port)) {
 
     init {
         viewModelScope.launch {
@@ -57,6 +60,10 @@ class MainViewModel(
         accept(MainViewInput.StopProxy)
     }
 
+    fun reset() {
+        TODO("Implement me")
+    }
+
     fun selectTransaction(index: Int) {
         accept(MainViewInput.SelectTransaction(index))
     }
@@ -70,7 +77,7 @@ class MainViewModel(
     override suspend fun inputToResult(input: MainViewInput): MainViewResult {
         return when (input) {
             is MainViewInput.StartProxy -> {
-                if (state.value is MainViewState.Stopped) {
+                if (!state.value.listening) {
                     proxy.listen()
                 }
                 MainViewResult.ProxyStarting
@@ -81,7 +88,7 @@ class MainViewModel(
             }
 
             is MainViewInput.StopProxy -> {
-                if (state.value !is MainViewState.Stopped) {
+                if (state.value.listening) {
                     proxy.close()
                 }
                 MainViewResult.ProxyStopped
@@ -95,8 +102,12 @@ class MainViewModel(
                 MainViewResult.NewTransaction(input.tx)
             }
 
+            is MainViewInput.TransactionEnded -> {
+                MainViewResult.TransactionEnded(input.tx)
+            }
+
             is MainViewInput.SelectTransaction -> {
-                if (state.value is MainViewState.Ready) {
+                if (state.value.listening) {
                     MainViewResult.TransactionSelected(input.index)
                 } else {
                     MainViewResult.NoChange
@@ -111,21 +122,42 @@ class MainViewModel(
     ): MainViewState {
         return when (result) {
             is MainViewResult.NoChange -> currentState
-            is MainViewResult.ProxyStopped -> MainViewState.Stopped
-            is MainViewResult.ProxyStarting -> MainViewState.Starting
-            is MainViewResult.ProxyStarted -> MainViewState.Ready(proxy.port, emptyList())
+            is MainViewResult.ProxyStopped -> currentState.copy(listening = false)
+            is MainViewResult.ProxyStarting -> currentState
+            is MainViewResult.ProxyStarted -> currentState.copy(listening = true)
             is MainViewResult.NewTransaction -> {
-                require (currentState is MainViewState.Ready) {
+                require(currentState.listening) {
                     "Cannot add a new transaction to a non-ready state (current state: $currentState)"
                 }
 
+                val tx = result.tx
+                val vm = newTxViewModel(tx)
+
+                // We _do_ want to know when the transaction ends, so let's
+                // set that up here.
+                viewModelScope.launch {
+                    tx.events
+                        .filter { it.tx.state.isTerminal }
+                        .take(1)
+                        .collect {
+                            // We've got a terminal event
+                            dispatch(MainViewInput.TransactionEnded(tx))
+                        }
+                }
+
                 currentState.copy(
-                    transactions = currentState.transactions + newTxViewModel(result.tx),
+                    transactions = currentState.transactions + vm,
+                )
+            }
+
+            is MainViewResult.TransactionEnded -> {
+                currentState.copy(
+                    hasOneCompletedTx = true,
                 )
             }
 
             is MainViewResult.TransactionSelected -> {
-                require (currentState is MainViewState.Ready) {
+                require(currentState.listening) {
                     "Cannot select a transaction in a non-ready state (current state: $currentState)"
                 }
 
@@ -138,19 +170,18 @@ class MainViewModel(
         val vm = TransactionViewModel(tx)
         val job = viewModelScope.coroutineContext[Job.Key]
         job?.invokeOnCompletion { vm.close() }
+
         return vm
     }
 }
 
-sealed interface MainViewState {
-    object Stopped : MainViewState
-    object Starting : MainViewState
-    data class Ready(
-        val port: Int,
-        val transactions: List<TransactionViewModel>,
-        val selectedIndex: Int? = null,
-    ) : MainViewState
-}
+data class MainViewState(
+    val listening: Boolean = false,
+    val port: Int? = null,
+    val transactions: List<TransactionViewModel> = emptyList(),
+    val selectedIndex: Int? = null,
+    val hasOneCompletedTx: Boolean = false,
+)
 
 sealed interface MainViewInput {
     object StartProxy : MainViewInput
@@ -158,6 +189,7 @@ sealed interface MainViewInput {
     object StopProxy : MainViewInput
     object ProxyStopped : MainViewInput
     class TransactionStarted(val tx: Transaction) : MainViewInput
+    class TransactionEnded(val tx: Transaction) : MainViewInput
     class SelectTransaction(val index: Int?) : MainViewInput
 }
 
@@ -167,5 +199,6 @@ sealed interface MainViewResult {
     object ProxyStarting : MainViewResult
     object ProxyStarted : MainViewResult
     class NewTransaction(val tx: Transaction) : MainViewResult
+    class TransactionEnded(val tx: Transaction) : MainViewResult
     class TransactionSelected(val index: Int?) : MainViewResult
 }

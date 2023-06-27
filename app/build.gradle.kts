@@ -124,7 +124,7 @@ compose {
 sqldelight {
     databases {
         create("Db") {
-            packageName.set("com.bendb.ama.db")
+            packageName.set("com.bendb.ama.app.db")
 
             generateAsync.set(true)
         }
