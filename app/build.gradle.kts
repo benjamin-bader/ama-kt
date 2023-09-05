@@ -17,7 +17,6 @@
 // Ignores a compiler warning about unused variables in sourceSets; allegedly fixed in Kotlin 1.9.
 // https://youtrack.jetbrains.com/issue/KT-38871/Kotlin-Gradle-DSL-MPP-UNUSEDVARIABLE-when-configuring-a-sourceset-with-delegated-property
 @file:OptIn(ExperimentalComposeLibrary::class)
-@file:Suppress("UNUSED_VARIABLE")
 
 import org.jetbrains.compose.ExperimentalComposeLibrary
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
@@ -54,6 +53,7 @@ kotlin {
 
                 implementation(libs.appdirs)
                 implementation(libs.kotlin.inject.runtime)
+                implementation(libs.kotlinx.coroutines.core)
                 implementation(libs.kotlinx.serialization.json)
                 implementation(libs.ktoml.core)
                 implementation(libs.kstore.core)
@@ -88,7 +88,7 @@ kotlin {
 }
 
 compose {
-    kotlinCompilerPlugin.set("androidx.compose.compiler:compiler:1.4.7")
+    //kotlinCompilerPlugin.set("androidx.compose.compiler:compiler:1.4.7")
 
     desktop {
         application {
