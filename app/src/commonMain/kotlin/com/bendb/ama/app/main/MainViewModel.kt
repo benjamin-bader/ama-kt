@@ -184,20 +184,20 @@ data class MainViewState(
 )
 
 sealed interface MainViewInput {
-    object StartProxy : MainViewInput
-    object ProxyStarted : MainViewInput
-    object StopProxy : MainViewInput
-    object ProxyStopped : MainViewInput
+    data object StartProxy : MainViewInput
+    data object ProxyStarted : MainViewInput
+    data object StopProxy : MainViewInput
+    data object ProxyStopped : MainViewInput
     class TransactionStarted(val tx: Transaction) : MainViewInput
     class TransactionEnded(val tx: Transaction) : MainViewInput
     class SelectTransaction(val index: Int?) : MainViewInput
 }
 
 sealed interface MainViewResult {
-    object NoChange : MainViewResult
-    object ProxyStopped : MainViewResult
-    object ProxyStarting : MainViewResult
-    object ProxyStarted : MainViewResult
+    data object NoChange : MainViewResult
+    data object ProxyStopped : MainViewResult
+    data object ProxyStarting : MainViewResult
+    data object ProxyStarted : MainViewResult
     class NewTransaction(val tx: Transaction) : MainViewResult
     class TransactionEnded(val tx: Transaction) : MainViewResult
     class TransactionSelected(val index: Int?) : MainViewResult

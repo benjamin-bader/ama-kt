@@ -25,16 +25,15 @@ import io.github.xxfast.kstore.KStore
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
 import net.harawata.appdirs.AppDirsFactory
+import okio.FileNotFoundException
 import okio.Path.Companion.toPath
 import okio.buffer
-import java.io.FileNotFoundException
-import java.util.Locale
 
 suspend fun getConfigurationStorage(): KStore<Configuration> {
     // Different OS have different conventions for where to store config files.
     // MacOS and most linux distros assume a reverse-dns style name, while Windows
     // uses the company (read: author) and app names.
-    val osName = System.getProperty("os.name")?.lowercase(Locale.US) ?: ""
+    val osName = System.getProperty("os.name")?.lowercase() ?: ""
     val appName = when {
         osName.startsWith("mac os x") -> AppInfo.bundleName
         osName.startsWith("windows") -> AppInfo.name
@@ -109,6 +108,10 @@ class TomlFileCodec<T : @Serializable Any>(
     }
 
     companion object {
-        private val FS = okio.FileSystem.SYSTEM
+        private val FS = FileSystems.DEFAULT
     }
+}
+
+expect object FileSystems {
+    val DEFAULT: okio.FileSystem
 }
