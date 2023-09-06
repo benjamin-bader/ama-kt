@@ -65,7 +65,7 @@ import com.bendb.ama.app.main.MainViewModel
 import com.bendb.ama.app.main.MainViewState
 import com.bendb.ama.app.main.TransactionViewModel
 import com.bendb.ama.app.main.TxModelState
-import com.bendb.ama.proxy.ProxyServer
+import com.bendb.ama.proxy.DefaultProxyServer
 import com.bendb.ama.proxy.TransactionData
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
@@ -83,7 +83,7 @@ import javax.swing.JFileChooser
 suspend fun main() {
     val configStore = getConfigurationStorage()
     val config = configStore.get() ?: Configuration()
-    val server = ProxyServer(Dispatchers.IO, config.http.port)
+    val server = DefaultProxyServer(Dispatchers.IO, config.http.port)
     val vm = MainViewModel(server)
 
     application {

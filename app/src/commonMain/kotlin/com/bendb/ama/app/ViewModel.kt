@@ -16,6 +16,7 @@
 
 package com.bendb.ama.app
 
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -38,9 +39,10 @@ import okio.Closeable
  * of type [E] in response to events.
  */
 abstract class ViewModel<S, I, R, E>(
-    initialState: () -> S
+    initialState: () -> S,
+    dispatcher: CoroutineDispatcher = Dispatchers.Default,
 ) : Closeable {
-    protected val viewModelScope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    protected val viewModelScope: CoroutineScope = CoroutineScope(SupervisorJob() + dispatcher)
 
     private val mutableState = MutableStateFlow(initialState())
     private val mutableInputs = MutableSharedFlow<I>()
@@ -64,7 +66,7 @@ abstract class ViewModel<S, I, R, E>(
         }
     }
 
-    constructor(initialState: S) : this({ initialState })
+    constructor(initialState: S, dispatcher: CoroutineDispatcher = Dispatchers.Default) : this({ initialState }, dispatcher)
 
     open fun accept(input: I) {
         viewModelScope.launch {

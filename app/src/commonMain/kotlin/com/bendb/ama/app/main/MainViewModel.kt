@@ -21,6 +21,8 @@ import com.bendb.ama.proxy.ProxyServer
 import com.bendb.ama.proxy.SessionEvent
 import com.bendb.ama.proxy.Transaction
 import com.bendb.ama.proxy.isTerminal
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.filterIsInstance
@@ -28,8 +30,9 @@ import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.launch
 
 class MainViewModel(
-    private val proxy: ProxyServer
-) : ViewModel<MainViewState, MainViewInput, MainViewResult, Nothing>(MainViewState(port = proxy.port)) {
+    private val proxy: ProxyServer,
+    dispatcher: CoroutineDispatcher = Dispatchers.Default,
+) : ViewModel<MainViewState, MainViewInput, MainViewResult, Nothing>(MainViewState(port = proxy.port), dispatcher) {
 
     init {
         viewModelScope.launch {
@@ -60,8 +63,8 @@ class MainViewModel(
         accept(MainViewInput.StopProxy)
     }
 
-    fun reset() {
-        TODO("Implement me")
+    fun clearTransactions() {
+        accept(MainViewInput.ClearTransactions)
     }
 
     fun selectTransaction(index: Int) {
@@ -113,6 +116,10 @@ class MainViewModel(
                     MainViewResult.NoChange
                 }
             }
+
+            is MainViewInput.ClearTransactions -> {
+                MainViewResult.ClearTransactions
+            }
         }
     }
 
@@ -163,6 +170,14 @@ class MainViewModel(
 
                 currentState.copy(selectedIndex = result.index)
             }
+
+            is MainViewResult.ClearTransactions -> {
+                currentState.copy(
+                    transactions = emptyList(),
+                    selectedIndex = null,
+                    hasOneCompletedTx = false,
+                )
+            }
         }
     }
 
@@ -191,6 +206,7 @@ sealed interface MainViewInput {
     class TransactionStarted(val tx: Transaction) : MainViewInput
     class TransactionEnded(val tx: Transaction) : MainViewInput
     class SelectTransaction(val index: Int?) : MainViewInput
+    data object ClearTransactions : MainViewInput
 }
 
 sealed interface MainViewResult {
@@ -201,4 +217,5 @@ sealed interface MainViewResult {
     class NewTransaction(val tx: Transaction) : MainViewResult
     class TransactionEnded(val tx: Transaction) : MainViewResult
     class TransactionSelected(val index: Int?) : MainViewResult
+    data object ClearTransactions : MainViewResult
 }

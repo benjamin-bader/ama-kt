@@ -38,15 +38,27 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-class ProxyServer(
+interface ProxyServer : Closeable {
+    val port: Int
+    val sessionEvents: SharedFlow<SessionEvent>
+    val proxyStateFlow: StateFlow<ProxyState>
+    fun listen()
+
+    enum class ProxyState {
+        STOPPED,
+        LISTENING,
+    }
+}
+
+class DefaultProxyServer(
     private val dispatcher: CoroutineDispatcher,
-    val port: Int,
-) : Closeable {
+    override val port: Int,
+) : ProxyServer {
     private var jobRef = atomic<Job?>(null)
     private val nextId = atomic(ULong.MIN_VALUE.toLong())
 
     private val mutableSessionEventFlow = MutableSharedFlow<SessionEvent>()
-    private val mutableProxyStateFlow = MutableStateFlow(ProxyState.STOPPED)
+    private val mutableProxyStateFlow = MutableStateFlow(ProxyServer.ProxyState.STOPPED)
 
     /**
      * A flow of [SessionEvents][SessionEvent] that occur on this proxy server.
@@ -54,16 +66,16 @@ class ProxyServer(
      * This is a *hot* flow, meaning that it will emit events even if there are no
      * subscribers.
      */
-    val sessionEvents: SharedFlow<SessionEvent> = mutableSessionEventFlow.asSharedFlow()
+    override val sessionEvents: SharedFlow<SessionEvent> = mutableSessionEventFlow.asSharedFlow()
 
     /**
-     * A flow of [ProxyState] changes that occur on this proxy server.
+     * A flow of [ProxyServer.ProxyState] changes that occur on this proxy server.
      *
-     * Valid states are [ProxyState.LISTENING] and [ProxyState.STOPPED].
+     * Valid states are [ProxyServer.ProxyState.LISTENING] and [ProxyServer.ProxyState.STOPPED].
      */
-    val proxyStateFlow: StateFlow<ProxyState> = mutableProxyStateFlow.asStateFlow()
+    override val proxyStateFlow: StateFlow<ProxyServer.ProxyState> = mutableProxyStateFlow.asStateFlow()
 
-    fun listen() {
+    override fun listen() {
         val supervisorJob = SupervisorJob()
         if (!jobRef.compareAndSet(null, supervisorJob)) {
             throw IllegalStateException("Already listening")
@@ -86,7 +98,7 @@ class ProxyServer(
 
     private suspend fun serve(scope: CoroutineScope) {
         KtorListener(port).use { listener ->
-            mutableProxyStateFlow.value = ProxyState.LISTENING
+            mutableProxyStateFlow.value = ProxyServer.ProxyState.LISTENING
 
             val pool = DefaultConnectionPool(listener.selectorManager)
             while (true) {
@@ -122,12 +134,7 @@ class ProxyServer(
 
     override fun close() {
         jobRef.getAndSet(null)?.cancel()
-        mutableProxyStateFlow.value = ProxyState.STOPPED
-    }
-
-    enum class ProxyState {
-        STOPPED,
-        LISTENING,
+        mutableProxyStateFlow.value = ProxyServer.ProxyState.STOPPED
     }
 }
 

@@ -29,6 +29,7 @@ ktor-networkTls = { module = "io.ktor:ktor-network-tls", version.ref = "ktor" }
 okio = "com.squareup.okio:okio:3.3.0"
 sqldelight-coroutines = { module = "app.cash.sqldelight:coroutines-extensions", version.ref = "sqldelight" }
 sqldelight-sqliteDriver = { module = "app.cash.sqldelight:sqlite-driver", version.ref = "sqldelight" }
+turbine = "app.cash.turbine:turbine:1.0.0"
 
 [plugins]
 atomicfu = { id = "kotlinx-atomicfu", version.ref = "atomicfu" }
