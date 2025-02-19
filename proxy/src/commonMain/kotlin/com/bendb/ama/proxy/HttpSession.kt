@@ -60,7 +60,7 @@ class HttpOneSession(
     learn about Compose and MVI patterns in quite a bit more depth.
      */
 
-    override suspend fun run(): Flow<SessionEvent> = flow {
+    override fun run(): Flow<SessionEvent> = flow {
         val session = this@HttpOneSession
 
         emit(SessionEvent.Started(session))
@@ -168,7 +168,10 @@ class HttpTransaction(
         advanceState(TransactionState.REQUEST_BODY)
     }
 
-    private suspend fun readRemoteResponse(readChannel: ByteReadChannel, response: MutableHttpResponse) {
+    private suspend fun readRemoteResponse(
+        readChannel: ByteReadChannel,
+        response: MutableHttpResponse,
+    ) {
         response.statusLine = readChannel.readCrLf()
         advanceState(TransactionState.RESPONSE_LINE)
 
@@ -207,7 +210,11 @@ class HttpTransaction(
         }
     }
 
-    private suspend fun readChunkedBody(readChannel: ByteReadChannel, compressionMethod: String?): ByteArray {
+    @Suppress("BlockingMethodInNonBlockingContext") // ByteArrayOutputStream is entirely in-memory
+    private suspend fun readChunkedBody(
+        readChannel: ByteReadChannel,
+        compressionMethod: String?,
+    ): ByteArray {
         val baos = ByteArrayOutputStream()
         while (true) {
             val chunkSize = readChannel.readCrLf().toInt(radix = 16)
@@ -305,6 +312,11 @@ class HttpTransaction(
         check(nextState > state) { "Attempted to transition from $state to $nextState" }
 
         val data = TransactionData(nextState, request.toImmutable(), response.toImmutable())
+
+        // nextState will never be TransactionState.STARTED, and the compiler is smart enough
+        // to warn about that unreachable state, but at the same time is not smart enough to
+        // understand that the `when` is exhaustive if we leave it out.  So we suppress the warning.
+        @Suppress("KotlinConstantConditions")
         val event = when (nextState) {
             TransactionState.STARTED -> TransactionEvent.Started(data)
             TransactionState.REQUEST_LINE -> TransactionEvent.RequestLine(data)
@@ -392,6 +404,7 @@ suspend fun ByteReadChannel.readCrLf(): String {
                     return sb.toString()
                 }
             }
+
             else -> cr = false
         }
     }

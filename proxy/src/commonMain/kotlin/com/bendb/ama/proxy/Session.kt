@@ -24,12 +24,12 @@ value class SessionId(val id: ULong)
 
 interface Session : SuspendCloseable {
     val id: SessionId
-    suspend fun run(): Flow<SessionEvent>
+    fun run(): Flow<SessionEvent>
 }
 
 object EmptySession : Session {
     override val id: SessionId = SessionId(0UL)
-    override suspend fun run(): Flow<SessionEvent> = emptyFlow()
+    override fun run(): Flow<SessionEvent> = emptyFlow()
     override suspend fun close() {}
 }
 

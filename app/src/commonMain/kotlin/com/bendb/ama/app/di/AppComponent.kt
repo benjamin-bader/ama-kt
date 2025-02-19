@@ -18,6 +18,7 @@ package com.bendb.ama.app.di
 
 import com.bendb.ama.app.Configuration
 import com.bendb.ama.app.getConfigurationStorage
+import com.bendb.ama.proxy.DefaultProxyServer
 import com.bendb.ama.proxy.ProxyServer
 import io.github.xxfast.kstore.KStore
 import kotlinx.coroutines.Dispatchers
@@ -29,7 +30,7 @@ abstract class AppComponent {
 
     @Provides
     fun provideProxyServer(configuration: Configuration): ProxyServer {
-        return ProxyServer(Dispatchers.IO, configuration.http.port)
+        return DefaultProxyServer(Dispatchers.IO, configuration.http.port)
     }
 
     @Provides
